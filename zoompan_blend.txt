@@ -1,0 +1,17 @@
+ffmpeg -i materials/1.jpg ^
+-i materials/2.jpg ^
+-i materials/3.jpg ^
+-filter_complex ^
+"[0:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out0]; ^
+[1:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out1]; ^
+[2:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out2]; ^
+[out1][out0] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend0]; ^
+[out2][out1] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend1]; ^
+[blend0][blend1] concat=n=2:v=1:a=0, format=yuv420p [v] ^
+" -map "[v]" -c:v libx264 -pix_fmt yuvj420p  zoom_blend.mp4
+
+
+
+
+
+

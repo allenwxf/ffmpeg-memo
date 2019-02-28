@@ -1,0 +1,1 @@
+ffmpeg -i materials/1.jpg -vf [in]zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125[out] -v quiet -stats zoompan.mp4
