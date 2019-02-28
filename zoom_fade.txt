@@ -2,8 +2,8 @@ ffmpeg -i materials/1.jpg ^
 -i materials/2.jpg ^
 -i materials/3.jpg ^
 -filter_complex ^
-"[0:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900,trim=duration=3,fade=t=out:st=2:d=1 [out0]; ^
-[1:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900,trim=duration=3,fade=t=out:st=2:d=1 [out1]; ^
-[2:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900,trim=duration=3,fade=t=out:st=2:d=1 [out2]; ^
+"[0:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900,trim=duration=3,fade=t=out:st=2:d=0.5 [out0]; ^
+[1:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900,trim=duration=3,fade=t=out:st=2:d=0.5 [out1]; ^
+[2:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900,trim=duration=3,fade=t=out:st=2:d=0.5 [out2]; ^
 [out0][out1][out2] concat=n=3:v=1:a=0, format=yuv420p [v] ^
 " -map "[v]" -c:v libx264 -pix_fmt yuvj420p -v quiet -stats zoom_fade.mp4
