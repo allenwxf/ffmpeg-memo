@@ -3,15 +3,13 @@ ffmpeg -i materials/1.jpg ^
 -i materials/3.jpg ^
 -filter_complex ^
 "[0:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out0]; ^
+[out0] split [out0_1][out0_2]; ^
 [1:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out1]; ^
+[out1] split [out1_1][out1_2]; ^
 [2:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out2]; ^
-[out1][out0] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend0]; ^
-[out2][out1] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend1]; ^
-[blend0][blend1] concat=n=2:v=1:a=0, format=yuv420p [v] ^
-" -map "[v]" -c:v libx264 -pix_fmt yuvj420p  zoom_blend.mp4
-
-
-
-
-
-
+[out2] split [out2_1][out2_2]; ^
+[out0_1][out1_1] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend0]; ^
+[out1_2][out2_1] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend1]; ^
+[out2_2][out0_2] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend3]; ^
+[blend0][blend1][blend3] concat=n=3:v=1:a=0, format=yuv420p [v] ^
+" -map "[v]" -c:v libx264 -pix_fmt yuvj420p -v quiet -stats zoom_blend.mp4
