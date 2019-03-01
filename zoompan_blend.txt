@@ -2,14 +2,33 @@ ffmpeg -i materials/1.jpg ^
 -i materials/2.jpg ^
 -i materials/3.jpg ^
 -filter_complex ^
-"[0:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out0]; ^
+"[0:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=80,trim=duration=3 [out0]; ^
 [out0] split [out0_1][out0_2]; ^
-[1:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out1]; ^
+[1:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=80,trim=duration=3 [out1]; ^
 [out1] split [out1_1][out1_2]; ^
-[2:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=125 [out2]; ^
+[2:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=1600x900:d=80,trim=duration=3 [out2]; ^
 [out2] split [out2_1][out2_2]; ^
-[out0_1][out1_1] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend0]; ^
-[out1_2][out2_1] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend1]; ^
-[out2_2][out0_2] blend=all_expr='A*(if(gte(T,0.5),1,T/0.5))+B*(1-(if(gte(T,0.5),1,T/0.5)))',setpts=PTS-STARTPTS [blend3]; ^
-[blend0][blend1][blend3] concat=n=3:v=1:a=0, format=yuv420p [v] ^
+[out1_1][out0_1] blend=all_expr='A*(if(gte(T,1),1,T/1))+B*(1-(if(gte(T,2.5),1,T/2.5)))' [blend0]; ^
+[out2_1][out1_2] blend=all_expr='A*(if(gte(T,1),1,T/1))+B*(1-(if(gte(T,1),1,T/1)))' [blend1]; ^
+[out0_2][out2_2] blend=all_expr='A*(if(gte(T,1),1,T/1))+B*(1-(if(gte(T,1),1,T/1)))' [blend2]; ^
+[blend0][blend1][blend2] concat=n=3:v=1:a=0, format=yuv420p [v] ^
 " -map "[v]" -c:v libx264 -pix_fmt yuvj420p -v quiet -stats zoom_blend.mp4
+
+
+
+ffmpeg -y -loop 1 -i materials/1.jpg ^
+-loop 1 -i materials/2.jpg ^
+-filter_complex ^
+"[0:v] zoompan='if(eq(on,0),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=480x270:d=80,trim=duration=3 [out0]; ^
+[out0] split [out0_1][out0_2]; ^
+[1:v] zoompan='if(eq(on,1),1.1,zoom-0.0008)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=480x270:d=80,trim=duration=3 [out1]; ^
+[out1] split [out1_1][out1_2]; ^
+[out1_1][out0_1] blend=all_expr='A*(if(gte(T,1),1,T/1))+B*(1-(if(gte(T,1),1,T/1)))' [blend0]; ^
+[out0_2][out1_2] blend=all_expr='A*(if(gte(T,1),1,T/1))+B*(1-(if(gte(T,1),1,T/1)))' [blend1]; ^
+[blend0][blend1] concat=n=2:v=1:a=0, format=yuv420p [v] ^
+" -map "[v]" -c:v libx264 -pix_fmt yuvj420p zoom_blend_tmp.mp4
+
+
+[out1_1][out0_1] blend=all_expr='A*(if(gte(T,1),1,T/1))+B*(1-(if(gte(T,1),1,T/1)))' [blend0]; ^
+[out0_2][out1_2] blend=all_expr='A*(if(gte(T,1),1,T/1))+B*(1-(if(gte(T,1),1,T/1)))' [blend1]; ^
+all_mode='overlay'
