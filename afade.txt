@@ -1,0 +1,9 @@
+ffmpeg -y -i materials/musics/TAMUSIC.mp3 ^
+-i materials/1.jpg ^
+-filter_complex ^
+"[0:a] afade=enable='between(t,0,2)':t=in:st=0:d=2, ^
+        afade=enable='between(t,5,7)':t=out:st=5:d=2, ^
+        volume=enable='between(t,7,14)':volume=0.0:eval=frame, ^
+        afade=enable='between(t,14,20)':t=in:st=14:d=6, atrim=0:20 [outa]; ^
+[1:v] scale=6400x3600, zoompan='if(eq(on,0),1.1,zoom-0.001)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=hd720:d=500, trim=duration=20 [outv] ^
+" -map [outv] -c:v libx264 -pix_fmt yuvj420p -r 25 -map [outa] -c:a aac -v quiet -stats afade.mp4

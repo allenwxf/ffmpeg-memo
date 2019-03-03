@@ -1,0 +1,119 @@
+memoflow:
+  logo: tuzhuyou.jpg
+  author:
+    display: true
+    font_size: 12
+    subtitle_x: 0
+    subtitle_y: 0
+    subtitle_color: #ff0000
+    subtitle_vfx:
+  bgmusic: [Akito.mp3, alphaPavPrincess.mp3, Lightscape-EscapeThisMoment.mp3, October-TimeToLove.mp3, Otokaze-SavetheflavorPart3-Insturmentalversion.mp3, pastorallandscape.mp3, TAMUSIC.mp3, yuiko-tsuki.mp3]
+
+  cut1:
+    type1:
+      strategy: random
+      lists:
+        - duration: 3
+          subtitle_font_size: 12
+          subtitle_x: 0
+          subtitle_y: 0
+          subtitle_color: #ff0000
+          subtitle_vfx:
+        - duration: 3
+          subtitle_font_size: 12
+          subtitle_x: 0
+          subtitle_y: 0
+          subtitle_color: #ff0000
+          subtitle_vfx:
+    type2:
+      duration: [3, 4, 5]
+      trans_in: [1, 2, 3, 4]
+      trans_out: [1, 2, 3, 4]
+      subtitle: ""
+      subtitle_font_size: 12
+      subtitle_x: 0
+      subtitle_y: 0
+      subtitle_color: #ff0000
+      subtitle_vfx:
+    type3:
+      duration: [15]
+      trans_in: [1, 2, 3, 4]
+      trans_out: [1, 2, 3, 4]
+      subtitle: ""
+      subtitle_font_size: 12
+      subtitle_x: 0
+      subtitle_y: 0
+      subtitle_color: #ff0000
+      subtitle_vfx:
+  cut2:
+    type1:
+      strategy: random
+      lists:
+        - duration: 3
+          subtitle_font_size: 12
+          subtitle_x: 0
+          subtitle_y: 0
+          subtitle_color: #ff0000
+          subtitle_vfx:
+        - duration: 3
+          subtitle_font_size: 12
+          subtitle_x: 0
+          subtitle_y: 0
+          subtitle_color: #ff0000
+          subtitle_vfx:
+    type2:
+      duration: [3, 4, 5]
+      trans_in: [1, 2, 3, 4]
+      trans_out: [1, 2, 3, 4]
+      subtitle: ""
+      subtitle_font_size: 12
+      subtitle_x: 0
+      subtitle_y: 0
+      subtitle_color: #ff0000
+      subtitle_vfx:
+    type3:
+      duration: [15]
+      trans_in: [1, 2, 3, 4]
+      trans_out: [1, 2, 3, 4]
+      subtitle: ""
+      subtitle_font_size: 12
+      subtitle_x: 0
+      subtitle_y: 0
+      subtitle_color: #ff0000
+      subtitle_vfx:
+  cut3:
+    type1:
+      strategy: random
+      lists:
+        - duration: 3
+          subtitle_font_size: 12
+          subtitle_x: 0
+          subtitle_y: 0
+          subtitle_color: #ff0000
+          subtitle_vfx:
+        - duration: 3
+          subtitle_font_size: 12
+          subtitle_x: 0
+          subtitle_y: 0
+          subtitle_color: #ff0000
+          subtitle_vfx:
+    type2:
+      duration: [3, 4, 5]
+      trans_in: [1, 2, 3, 4]
+      trans_out: [1, 2, 3, 4]
+      subtitle: ""
+      subtitle_font_size: 12
+      subtitle_x: 0
+      subtitle_y: 0
+      subtitle_color: #ff0000
+      subtitle_vfx:
+    type3:
+      duration: [15]
+      trans_in: [1, 2, 3, 4]
+      trans_out: [1, 2, 3, 4]
+      subtitle: ""
+      subtitle_font_size: 12
+      subtitle_x: 0
+      subtitle_y: 0
+      subtitle_color: #ff0000
+      subtitle_vfx:

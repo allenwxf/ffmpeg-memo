@@ -1,0 +1,39 @@
+ffmpeg -y -i materials/musics/TAMUSIC.mp3 ^
+-f lavfi -i "color=black:s=hd720" ^
+-i materials/1.jpg ^
+-i materials/2.jpg ^
+-i materials/3.jpg ^
+-i materials/sample/POI_4/2019-03-03-15.07.47.mp4 ^
+-i materials/sample/POI_4/WechatIMG18.jpeg ^
+-filter_complex ^
+"movie=materials/logo.png[watermask]; ^
+[1:v] trim=duration=9 [over]; ^
+[2:v] pad="ih*16/9/sar:ih:(ow-iw)/2:(oh-ih)/2", scale=6400x3600, zoompan='if(eq(on,0),1.1,zoom-0.001)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=hd720:d=100, trim=duration=4, ^
+    drawtext=fontfile=materials/font/msyh.ttc:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2-128:enable='lt(t, 2)':text='2019年3月2日':fontsize=128:bordercolor=LightGrey:borderw=1, ^
+    drawtext=fontfile=materials/font/msyh.ttc:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2+128:enable='lt(t, 2)':text='星期五':fontsize=64:bordercolor=LightGrey:borderw=1 ^ [out0]; ^
+[3:v] pad="ih*16/9/sar:ih:(ow-iw)/2:(oh-ih)/2", scale=6400x3600, zoompan=z='min(max(zoom,pzoom)+0.0015,1.5)':x='if(gte(zoom,1.5),x,(iw+iw/zoom)/2)':y='if(gte(zoom,1.5),y,(ih+ih/zoom)/2)':s=hd720:d=100, trim=duration=4, ^
+    drawtext=fontfile=materials/font/msyh.ttc:fontcolor=white:x=(w-text_w)/2:y=(h-text_h)/2:enable='lt(t, 2)':text='周末像气球':fontsize=128 [out1]; ^
+[4:v] pad="ih*16/9/sar:ih:(ow-iw)/2:(oh-ih)/2", scale=6400x3600, zoompan='if(eq(on,0),1.1,zoom-0.001)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=hd720:d=100, trim=duration=4 [out2]; ^
+[5:v] pad="ih*16/9/sar:ih:(ow-iw)/2:(oh-ih)/2", scale=hd720, trim=duration=10 [v0]; ^
+[6:v] pad="ih*16/9/sar:ih:(ow-iw)/2:(oh-ih)/2", scale=6400x3600, zoompan='min(max(zoom,pzoom)+0.0015,1.5)':x='if(gte(zoom,1.5),x,(iw+iw/zoom)/2)':y='if(gte(zoom,1.5),y,(ih+ih/zoom)/2)':s=hd720:d=100, trim=duration=4 [out3]; ^
+[out0] format=pix_fmts=yuva420p, fade=t=out:st=3:d=1:alpha=1, setpts=PTS-STARTPTS [va0]; ^
+[over][va0] overlay [over1]; ^
+[out1] format=pix_fmts=yuva420p, fade=t=in:st=0:d=1:alpha=1, setpts=PTS-STARTPTS+3/TB [va1]; ^
+[over1][va1] overlay [over2]; ^
+[out2] format=pix_fmts=yuva420p, fade=t=in:st=0:d=1:alpha=1, setpts=PTS-STARTPTS+(3+3)/TB [va2]; ^
+[over2][va2] overlay [over3]; ^
+[over3][v0] concat=n=2:v=1:a=0, format=yuv420p [over4]; ^
+[out3] format=pix_fmts=yuva420p, fade=t=in:st=0:d=1:alpha=1, setpts=PTS-STARTPTS+(3+3+3+10)/TB [va3]; ^
+[over4][va3] overlay [outv_relay1]; ^
+[outv_relay1][watermask] overlay=main_w-overlay_w-10:10 [outv_relay2]; ^
+[outv_relay2] drawtext=fontfile=materials/font/msyh.ttc:fontcolor=white:x=w-text_w-10:y=h-text_h-10:text='@我的名字':fontsize=16 [outv]; ^
+[0:a] afade=enable='between(t,0,2)':t=in:st=0:d=2, ^
+        afade=enable='between(t,10,12)':t=out:st=10:d=2, ^
+        volume=enable='between(t,12,20)':volume=0.0:eval=frame, ^
+        afade=enable='between(t,20,22)':t=in:st=20:d=2, atrim=0:23 [outa1]; ^
+[5:a] adelay=10000, volume=volume=0.5:eval=frame, apad [outa2]; ^
+[outa2][outa1] amerge=inputs=2 [outa]^
+" -map [outv] -c:v libx264 -pix_fmt yuv420p -r 25 -profile:v baseline -level 3 -map [outa] ^
+-c:a aac -qscale:a 1 -ac 2 -ar 48000 -ab 192k ^
+-metadata title="我的旅游日记" -metadata artist="我的名字" -metadata album="路线名称" ^
+ -shortest combination.mp4

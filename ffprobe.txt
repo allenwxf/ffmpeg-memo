@@ -1,0 +1,2 @@
+# 获取视频信息（高宽：width/height、时长: duration、帧数：nb_frames）
+ffprobe -print_format json -show_streams -i input.mp4
