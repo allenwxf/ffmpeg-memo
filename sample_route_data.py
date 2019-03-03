@@ -4,6 +4,7 @@
 
 def gen_sample_route():
     return {
+        "author": "我的名字",
         "route": [
             {
                 "node": "cut1",

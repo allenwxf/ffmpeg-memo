@@ -1,9 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import sys
+import sys, os
 import getopt
 import random
+import re
 import yaml
 # from yaml.scanner import ScannerError
 import sample_route_data
@@ -14,15 +15,28 @@ class Memo:
     staticPath = "materials/"
     logoPath = staticPath + "logo.png"
     OUTPUTRES = "hd720"
+    AR = "16/9"
     CAPTIONTYPE = 1
     PICTYPE = 2
     VIDEOTYPE = 3
     PADSCALE = "6400x3600"
+    PIXFMT = "yuv420p"
 
     ffmpegCmd = "ffmpeg -y "
     ffmpegVoutConf = "-c:v libx264 -pix_fmt yuv420p -r 25 -profile:v baseline -level 3"
     ffmpegAoutConf = "-c:a aac -qscale:a 1 -ac 2 -ar 48000 -ab 192k"
     ffmpegMetaConf = "-metadata title=\"我的旅游日记\" -metadata artist=\"我的名字\" -metadata album=\"路线名称\""
+    # ffmpeg filter graph 输入序号
+    ffmpegInputOffset = 0
+    # ffmpeg 图片放大scale(用于动画平滑)
+    ffmpegPad = "pad=\"ih*{0}/sar:ih:(ow-iw)/2:(oh-ih)/2\"".format(AR)
+    # ffmpeg 1: 缩小效果; 2: 放大效果
+    ffmpegAnimations = {
+        1: "zoompan='if(eq(on,0),1.1,zoom-0.001)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s={0}".format(OUTPUTRES),
+        2: "zoompan=z='min(max(zoom,pzoom)+0.0015,1.5)':x='if(gte(zoom,1.5),x,(iw+iw/zoom)/2)':"
+           "y='if(gte(zoom,1.5),y,(ih+ih/zoom)/2)':s={0}".format(OUTPUTRES)
+    }
+    ffmpegLogoPos = "main_w-overlay_w-10:10"
 
     def __init__(self, script_conf_path):
         try:
@@ -38,45 +52,161 @@ class Memo:
 
         # 随机获取背景音乐
         bgmusic = self.get_random_bgmusic()
-        print(bgmusic)
 
-        # 产生黑色背景
+        # 产生黑色背景(用于blend效果)
         self.get_blank_bg()
 
-        # 输入素材列表、总时长、所有POI(CUT)格式化过的素材列表
-        total_duration, total_materials, input_materials = self.materials_join_conf(route_data)
+        # 总时长、所有POI(CUT)格式化过的素材列表
+        total_duration, total_materials = self.materials_join_conf(route_data)
+
+        # 添加
+        for material_segs in total_materials:
+            for input_material in material_segs["vplist"]:
+                self.ffmpegCmd += " -i {} ^\n".format(input_material["file"])
+
+        self.ffmpegCmd += " -filter_complex ^\n\""
+
+        # 添加水印graph
+        self.ffmpegCmd += "movie={0}[watermask]; ^\n".format(self.logoPath)
+
+        # 添加黑色背景(用于blend效果)
+        self.ffmpegInputOffset = 1
+        self.ffmpegCmd += "[{0}:v]trim=duration={1}[over0]; ^\n".format(self.ffmpegInputOffset, total_duration)
 
         # 得到POI遍历结果
         """
         eg.
         [{
             'vplist':[
-                {'trans_out': 2,'subtitle_vfx': None,'duration': 5,'file': 'materials/sample/POI_2/WechatIMG33.jpeg','subtitle_x': 0,'subtitle_font_size': 12,'trans_in': 4,'subtitle_y': 0,'subtitle': '','subtitle_color': None}, 
-                {'trans_out': 3, 'subtitle_vfx': None, 'duration': 3, 'file': 'materials/sample/POI_2/WechatIMG145.jpeg', 'subtitle_x': 0, 'subtitle_font_size': 12, 'trans_in': 1, 'subtitle_y': 0, 'subtitle': '', 'subtitle_color': None}
+                {'type': 2, 'trans_out': 2, 'animation': 1, 'subtitle_font': 'msyh.ttc', 'subtitle_vfx': None,'duration': 5,'file': 'materials/sample/POI_2/WechatIMG33.jpeg','subtitle_x': 0,'subtitle_font_size': 12,'trans_in': 4,'subtitle_y': 0,'subtitle': '','subtitle_color': None}, 
+                {'type': 2, 'trans_out': 3, 'animation': 1, 'subtitle_font': 'msyh.ttc', 'subtitle_vfx': None, 'duration': 3, 'file': 'materials/sample/POI_2/WechatIMG145.jpeg', 'subtitle_x': 0, 'subtitle_font_size': 12, 'trans_in': 1, 'subtitle_y': 0, 'subtitle': '', 'subtitle_color': None}
             ],
-            'captions': {'content': '文字内容文字内容1','duration': 3,'subtitle_x': 0,'subtitle_vfx': None,'subtitle_font_size': 12,'subtitle_y': 0,'subtitle_color': None}
+            'captions': {'content': '文字内容文字内容1','duration': 3,'subtitle_font': 'msyh.ttc','subtitle_x': 0,'subtitle_vfx': None,'subtitle_font_size': 12,'subtitle_y': 0,'subtitle_color': None}
         }, {
             'vplist': [
-                {'trans_out': 2,'subtitle_vfx': None,'duration': 5,'file': 'materials/sample/POI_2/WechatIMG132.jpeg','subtitle_x': 0,'subtitle_font_size': 12,'trans_in': 3,'subtitle_y': 0,'subtitle': '','subtitle_color ': None}
+                {'type': 2, 'trans_out': 2, 'animation': 1, 'subtitle_font': 'msyh.ttc', 'subtitle_vfx': None,'duration': 5,'file': 'materials/sample/POI_2/WechatIMG132.jpeg','subtitle_x': 0,'subtitle_font_size': 12,'trans_in': 3,'subtitle_y': 0,'subtitle': '','subtitle_color ': None}
             ],
             'captions ': {}
         }]
         """
+        # 单素材处理层
+        pic_offset = 0
+        video_offset = 0
+        for material_segs in total_materials:
+            # 叠加字幕
+            subtitle = ""
+            if material_segs["captions"]:
+                # subtitle_x = re.sub(r'W\s*-([0-9]*)]', r'w-text_w-\1', str(material_segs["captions"]["subtitle_x"]))
+                # subtitle_y = re.sub(r'H\s*-([0-9]*)]', r'h-text_h-\1', str(material_segs["captions"]["subtitle_y"]))
+                subtitle = ",drawtext=fontfile={0}:fontcolor={1}:x={2}:y={3}:enable='lt(t, {4})':text='{5}':" \
+                           "fontsize={6}".format(
+                                self.staticPath + "font/" + material_segs["captions"]["subtitle_font"],
+                                material_segs["captions"]["subtitle_color"],
+                                material_segs["captions"]["subtitle_x"], material_segs["captions"]["subtitle_y"],
+                                material_segs["captions"]["duration"],
+                                material_segs["captions"]["content"],
+                                material_segs["captions"]["subtitle_font_size"]
+                )
 
-        for input_material in input_materials:
-            self.ffmpegCmd += " -i {} ".format(input_material)
-        print(self.ffmpegCmd)
+            for material in material_segs["vplist"]:
+                self.ffmpegInputOffset += 1
 
-        self.ffmpegCmd += "filter_complex \""
+                duration = material["duration"]
+                # 如果是图片
+                if material["type"] == self.PICTYPE:
+                    animation = self.ffmpegAnimations[material["animation"]]
 
+                    self.ffmpegCmd += "[{0}:v]{1},scale={2},{3},trim=duration={4}".format(
+                        self.ffmpegInputOffset, self.ffmpegPad, self.PADSCALE, animation, duration)
+                    if subtitle:
+                        self.ffmpegCmd += subtitle
+                    # pic_offset += 1
+                # 如果是视频
+                elif material["type"] == self.VIDEOTYPE:
+                    self.ffmpegCmd += "[{0}:v]{1},scale={2},trim=duration={3}".format(
+                        self.ffmpegInputOffset, self.ffmpegPad, self.PADSCALE, duration)
+                    if subtitle:
+                        self.ffmpegCmd += subtitle
+                    # video_offset += 1
+                self.ffmpegCmd += " [out{0}]; ^\n".format(self.ffmpegInputOffset-2)
 
+        # 音频处理层
+        bgmusic_cmd = "[0:a]afade=enable='between(t,0,2)':t=in:st=0:d=2"
+        vaudio_cmd = ""
+        # 素材合成
+        over_offset = 0
+        setopts_ts_offset = 0
+        vaover_offset = 0
+        for material_segs in total_materials:
+            for material in material_segs["vplist"]:
+                if material["type"] == self.PICTYPE:
+                    self.ffmpegCmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=1:d=1:alpha=1," \
+                                      "setpts=PTS-STARTPTS{2}[va{3}]; ^\n".format(
+                                            over_offset, self.PIXFMT,
+                                            "" if setopts_ts_offset == 0 else "+"+str(setopts_ts_offset)+"/TB",
+                                            over_offset)
+                    self.ffmpegCmd += "[over{0}][va{1}]overlay[over{2}]; ^\n".format(
+                        over_offset, over_offset, over_offset+1)
 
+                    # bgmusic_cmd += "afade=enable='between(t,{0},{1})':t=in:st={2}:d=2".format(
+                    #     setopts_ts_offset + 1 + material["duration"] - 2, setopts_ts_offset+1+material["duration"],
+                    #     setopts_ts_offset + 1 + material["duration"] - 2
+                    # )
+                elif material["type"] == self.VIDEOTYPE:
+                    self.ffmpegCmd += "[over{0}][out{1}]concat=n=2:v=1:a=0,format={2}[over{3}]; ^\n".format(
+                        over_offset, over_offset, self.PIXFMT, over_offset+1)
 
+                    bgmusic_cmd += ",afade=enable='between(t,{0},{1})':t=out:st={2}:d=2," \
+                                   "volume=enable='between(t,{3},{4})':volume=0.0:eval=frame," \
+                                   "afade=enable='between(t,{5},{6})':t=in:st={7}:d=2".format(
+                                    setopts_ts_offset+1, setopts_ts_offset+1+2, setopts_ts_offset+1,
+                                    setopts_ts_offset+1+2, setopts_ts_offset+1+material["duration"]-2,
+                                    setopts_ts_offset+1+material["duration"]-2,
+                                    setopts_ts_offset+1+material["duration"],
+                                    setopts_ts_offset+1+material["duration"]-2)
 
+                    vaudio_cmd += ";[{0}:a]adelay={1},volume=volume=0.8:eval=frame,apad[outa{2}]; " \
+                                  "[outa{3}][aover{4}]amerge=inputs=2[aover{5}]".format(
+                                    over_offset, (setopts_ts_offset+1)*1000, vaover_offset, vaover_offset,
+                                    vaover_offset, vaover_offset+1)
+                    vaover_offset += 1
 
+                over_offset += 1
+                setopts_ts_offset += material["duration"] - 1
+        bgmusic_cmd += ",atrim=0:{0}[aover0]".format(setopts_ts_offset+1)
 
+        # print(self.ffmpegCmd)
 
+        # 添加水印
+        self.ffmpegCmd += "[over{0}][watermask]overlay={1}[outv_relay1]; ^\n".format(over_offset, self.ffmpegLogoPos)
+        # 添加作者
+        script_author_conf = self.scriptConf["memoflow"]["author"]
+        if script_author_conf["display"]:
+            self.ffmpegCmd += "[outv_relay1]drawtext=fontfile={0}:fontcolor={1}:x={2}:y={3}:text='@{4}':" \
+                              "fontsize={5}[outv]; ^\n".format(
+                                self.staticPath + "font/" + script_author_conf["font"],
+                                script_author_conf["color"],
+                                script_author_conf["x"],
+                                script_author_conf["y"],
+                                route_data["author"],
+                                script_author_conf["font_size"])
+        else:
+            self.ffmpegCmd += "[outv_relay1][outv];"
 
+        # 添加音频
+        self.ffmpegCmd += bgmusic_cmd
+        self.ffmpegCmd += vaudio_cmd
+
+        self.ffmpegCmd += "\" -map [outv] {0} -map [{1}] {2} {3} -shortest combination.mp4".format(
+            self.ffmpegVoutConf, "aover"+str(vaover_offset), self.ffmpegAoutConf, self.ffmpegMetaConf
+        )
+
+        fo = open("generated_ffmpeg_cmd.txt", "w")
+        fo.write(self.ffmpegCmd)
+        fo.close()
+
+        os.system(self.ffmpegCmd)
+        exit(0)
 
     def get_random_bgmusic(self):
         conf_bgmusic = self.scriptConf["memoflow"]["bgmusic"]
@@ -89,7 +219,7 @@ class Memo:
 
     def materials_join_conf(self, route_data):
         # 输入素材列表
-        input_materials = []
+        # input_materials = []
 
         # 总时长
         total_duration = 0
@@ -111,7 +241,7 @@ class Memo:
                 ]
             }
             """
-            print("node name: {}".format(node["node"]))
+            # print("node name: {}".format(node["node"]))
             # 遍历每个material
             for m in node["materials"]:
                 # 对于图片和视频，获取张数，以确定字幕时长
@@ -128,24 +258,28 @@ class Memo:
 
                         # 获取配置信息
                         cur_duration = random.choice(type_conf["duration"])
-                        cur_vp_conf = {"file": m_item["file"],
+                        cur_vp_conf = {
+                                       "type": m_item["type"],
+                                       "file": m_item["file"],
                                        "duration": cur_duration,
                                        "trans_in": random.choice(type_conf["trans_in"]),
                                        "trans_out": random.choice(type_conf["trans_out"]),
+                                       "animation": random.choice(type_conf["animation"]) if type_conf["animation"] else "",
                                        "subtitle": type_conf["subtitle"],
+                                       "subtitle_font": type_conf["subtitle_font"],
                                        "subtitle_font_size": type_conf["subtitle_font_size"],
                                        "subtitle_x": type_conf["subtitle_x"],
                                        "subtitle_y": type_conf["subtitle_y"],
                                        "subtitle_color": type_conf["subtitle_color"],
                                        "subtitle_vfx": type_conf["subtitle_vfx"]
-                                       }
+                                    }
 
                         cur_caption_duration += cur_duration
                         cur_vplist.append(cur_vp_conf)
 
                         total_duration += cur_duration
 
-                        input_materials.append(m_item["file"])
+                        # input_materials.append(m_item["file"])
                     if m_item["type"] == self.CAPTIONTYPE:
                         if type_conf["strategy"] == "random":
                             cur_caption_conf = random.choice(type_conf["lists"])
@@ -154,7 +288,7 @@ class Memo:
                 cur_materials["vplist"] = cur_vplist
                 total_materials.append(cur_materials)
 
-        return total_duration, total_materials, input_materials
+        return total_duration, total_materials
 
 
 class UsageError(Exception):
