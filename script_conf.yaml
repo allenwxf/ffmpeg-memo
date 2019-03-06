@@ -1,4 +1,5 @@
 memoflow:
+  route_id: 1
   logo: tuzhuyou.jpg
   author:
     display: true
@@ -11,6 +12,10 @@ memoflow:
   bgmusic: [Otokaze-SavetheflavorPart3-Insturmentalversion.mp3]
 
   cut1:
+    poi_cover: cut1.png
+    poi_title: "塞纳河畔，咖啡屋"
+    poi_subtitle: "老上海调调"
+    poi_cover_duration: 3
     type1:
       strategy: random
       lists:
@@ -53,6 +58,10 @@ memoflow:
       subtitle_color: "0xffffff"
       subtitle_vfx:
   cut2:
+    poi_cover: cut2.png
+    poi_title:
+    poi_subtitle:
+    poi_cover_duration: 3
     type1:
       strategy: random
       lists:
@@ -95,6 +104,10 @@ memoflow:
       subtitle_color: "0xffffff"
       subtitle_vfx:
   cut3:
+    poi_cover: cut1.png
+    poi_title:
+    poi_subtitle:
+    poi_cover_duration: 3
     type1:
       strategy: random
       lists:
