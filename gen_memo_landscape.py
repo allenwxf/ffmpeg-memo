@@ -16,13 +16,12 @@ class Memo:
     scriptConf = {}
     staticPath = "materials/"
     logoPath = staticPath + "logo.png"
-    OUTPUTRES = "720x1280"
+    OUTPUTRES = "hd720"
     AR = "16/9"
     CAPTIONTYPE = 1
     PICTYPE = 2
     VIDEOTYPE = 3
     PADSCALE = "6400x3600"
-    VPADSCALE = "1280x720"
     PIXFMT = "yuv420p"
 
     ffmpegCmd = "ffmpeg -y "
@@ -35,7 +34,7 @@ class Memo:
     # ffmpeg filter graph 输入序号
     ffmpegInputOffset = 0
     # ffmpeg 图片放大scale(用于动画平滑)
-    ffmpegPad = "pad=iw:iw*{0}/sar:(ow-iw)/2:(oh-ih)/2".format(AR)
+    ffmpegPad = "pad=ih*{0}/sar:ih:(ow-iw)/2:(oh-ih)/2".format(AR)
     # ffmpeg 1: 缩小效果; 2: 放大效果
     ffmpegAnimations = {
         1: "zoompan=z='if(eq(on,0),1.3,zoom-0.0005)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s={0}".format(OUTPUTRES),
@@ -236,7 +235,7 @@ class Memo:
         self.export_ffmpeg_filter_complex()
 
         # 导出ffmpeg命令
-        self.export_ffmpeg_cmd()
+        # self.export_ffmpeg_cmd()
 
         os.system(self.ffmpegCmd)
         exit(0)
