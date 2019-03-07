@@ -1,14 +1,14 @@
 ffmpeg -y -f lavfi -i "color=black@0.0:s=720x1280,format=rgba" ^
--f lavfi -i "color=black@0.0:s=720x1280,format=rgba" ^
 -i materials/2.jpg ^
 -filter_complex ^
-"[0:v]drawtext=fontsize=32:fontcolor=white:fontfile=materials/font/msyh.ttc:text='标题标题标题标题标题标题标题标题':y='min(h/4.5+n,h/4.5+20)':x=((w-tw)/2):alpha='min(1, n/15)', trim=duration=4 [t0]; ^
-[1:v]drawtext=fontsize=22:fontcolor=white:fontfile=materials/font/msyh.ttc:text='——————  子标题子标题  ——————':y='max(h/3.2-n,h/3.2-20)':x=((w-tw)/2):alpha='min(1, n/15)', trim=duration=4 [t1]; ^
-[2:v]pad=iw:iw*16/9/sar:(ow-iw)/2:(oh-ih)/2,scale=6400x3600, zoompan='if(eq(on,0),1.1,zoom-0.001)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=720x1280:d=100, ^
+"[0:v]split[poi0][poi1]; ^
+[poi0]drawtext=fontsize=32:fontcolor=white:fontfile=materials/font/msyh.ttc:text='标题标题标题标题标题标题标题标题':y='min(h/4.5+n,h/4.5+20)':x=((w-tw)/2):alpha='min(1, n/15)', trim=duration=4 [poit0]; ^
+[poi1]drawtext=fontsize=22:fontcolor=white:fontfile=materials/font/msyh.ttc:text='——————  子标题子标题  ——————':y='max(h/3.2-n,h/3.2-20)':x=((w-tw)/2):alpha='min(1, n/15)', trim=duration=4 [poit1]; ^
+[1:v]pad=iw:iw*16/9/sar:(ow-iw)/2:(oh-ih)/2,scale=6400x3600, zoompan='if(eq(on,0),1.1,zoom-0.001)':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':s=720x1280:d=100, ^
 trim=duration=4, drawbox=y=ih/4.9:w=iw:h=200:color=black@0.5:t=fill [out0]; ^
-[out0][t0]overlay[over0]; ^
-[over0][t1]overlay[outv] ^
-" -map [outv] -c:v libx264 -pix_fmt yuvj420p -r 25 drawtext.mp4
+[out0][poit0]overlay[poiover0]; ^
+[poiover0][poit1]overlay[over0] ^
+" -map [over0] -c:v libx264 -pix_fmt yuvj420p -r 25 drawtext.mp4
 
 
 
