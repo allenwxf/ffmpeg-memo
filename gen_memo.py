@@ -16,6 +16,7 @@ class Memo:
     BG_BLACK_DURATION = 1
     UGC_INPUT_OFFSET = 3
     OUTPUTRES = "720x1280"
+    OUTPUTR = 25
     AR = "16/9"
     POICOVERTYPE = 0
     CAPTIONTYPE = 1
@@ -40,7 +41,7 @@ class Memo:
     ffmpegCmd = "ffmpeg -y "
     ffmpegFilterComplexFile = "filter_complex."
     ffmpegFilterComplexCmd = ""
-    ffmpegVoutConf = "-c:v libx264 -pix_fmt yuv420p -r 25 -profile:v main -bf 0 -level 3"
+    ffmpegVoutConf = "-c:v libx264 -pix_fmt yuv420p -r {0} -profile:v main -bf 0 -level 3".format(OUTPUTR)
     ffmpegAoutConf = "-c:a aac -qscale:a 1 -ac 2 -ar 48000 -ab 192k"
     ffmpegMetaConf = "-metadata title=\"我的旅游日记\" -metadata artist=\"我的名字\" -metadata album=\"路线名称\" " \
                      "-metadata comment=\"\""
@@ -49,7 +50,7 @@ class Memo:
     ffmpegInputOffset = 0
 
     # ffmpeg 图片放大scale(用于动画平滑)
-    ffmpegPad = "pad=iw:iw*{0}/sar:(ow-iw)/2:(oh-ih)/2".format(AR)
+    ffmpegPad = "pad=iw+1:ceil(iw*{0}/sar)+1:(ow-iw)/2:(oh-ih)/2".format(AR)
 
     # ffmpeg 1: 缩小效果; 2: 放大效果
     ffmpegAnimations = {
@@ -57,6 +58,9 @@ class Memo:
         2: "zoompan=z='min(max(zoom,pzoom)+0.0005,2.0)':x='iw/2-(iw/zoom/2)':"
            "y='ih/2-(ih/zoom/2)':s={0}".format(OUTPUTRES)
     }
+
+    # POI cover animation
+    ffmpegPoiCoverAnimation = ""
     ffmpegLogoPos = "10:10"  # top-right: "main_w-overlay_w-10:10"
 
     ffmpegPoiTitleX = "((w-tw)/2)"
@@ -65,7 +69,7 @@ class Memo:
     ffmpegPoiSubtitleY = "max(h/3.2-n,h/3.2-20)"
     ffmpegPoiAlpha = "min(1, n/15)"
     ffmpegPoiBoxY = "ih/4.9"
-    ffmpegPoiBoxX = "iw"
+    ffmpegPoiBoxWidth = "iw"
     ffmpegPoiBoxHeight = 200
 
     def __init__(self, script_conf_path):
@@ -116,7 +120,7 @@ class Memo:
                              }]
              }]
         """
-        pprint(total_materials)
+        pprint(total_materials[0])
         # 随机获取背景音乐
         self.get_random_bgmusic()
 
@@ -129,7 +133,7 @@ class Memo:
         # 添加输入素材
         for poi_materials in total_materials:
             # POI COVER
-            poi_cover_path = self.poiCoverPath + route_data["route_id"] + poi_materials["poi_cover"]
+            poi_cover_path = self.poiCoverPath + str(route_data["route_id"]) + "/" + poi_materials["poi_cover"]
             if not os.path.exists(poi_cover_path):
                 poi_cover_path = self.poiCoverPath + self.POI_DEFAULT_COVER
             self.ffmpegCmd += " -i {}".format(poi_cover_path)
@@ -153,11 +157,13 @@ class Memo:
 
         # 根据POI cover数量生成对应数量的透明背景graph
         self.ffmpegInputOffset += 1
-        cmd = "[{0}:v]split".format(self.ffmpegInputOffset)
+        cmd = "[{0}:v]split=4".format(self.ffmpegInputOffset)
         poi_title_offset = 0
         for poi_materials in total_materials:
             if poi_materials["poi_title"]:
-                cmd += "[poi{0}]".format(str(poi_title_offset))
+                poi_subtitle_index = 2 * poi_title_offset
+                cmd += "[poi{0}]".format(poi_subtitle_index)
+                cmd += "[poi{0}]".format(poi_subtitle_index+1)
                 poi_title_offset += 1
         cmd += ";\n"
         self.ffmpegFilterComplexCmd += cmd
@@ -165,31 +171,18 @@ class Memo:
         # 1. 单素材处理层
         # pic_offset = 0
         # video_offset = 0
-        for poi_subtitle_offset, poi_materials in enumerate(total_materials):
+        for poi_materials in total_materials:
             # POI COVER
-            cmd = "[poi{0}]drawtext=fontsize={1}:fontcolor={2}:fontfile={3}:text={4}:x='{6}':y='{5}':alpha='{7}'," \
-                  "trim=duration={8}[poit{9}];\n".format(str(poi_subtitle_offset), self.POI_TITLE_FONTSIZE,
-                                                         self.POI_CAPTION_COLOR,
-                                                         self.staticPath + "font/" + self.POI_CAPTION_FONT,
-                                                         poi_materials["poi_title"],
-                                                         self.ffmpegPoiTitleX, self.ffmpegPoiTitleY,
-                                                         self.ffmpegPoiAlpha, self.POI_CAPTION_DURATION,
-                                                         str(poi_subtitle_offset))
-            cmd += "[poi{0}]drawtext=fontsize={1}:fontcolor={2}:fontfile={3}:text={4}:x='{6}':y='{5}':alpha='{7}'," \
-                   "trim=duration={8}[poit{9}];\n".format(str(poi_subtitle_offset + 1), self.POI_SUBTITLE_FONTSIZE,
-                                                          self.POI_CAPTION_COLOR,
-                                                          self.staticPath + "font/" + self.POI_CAPTION_FONT,
-                                                          poi_materials["poi_subtitle"],
-                                                          self.ffmpegPoiSubtitleX, self.ffmpegPoiSubtitleY,
-                                                          self.ffmpegPoiAlpha, self.POI_CAPTION_DURATION,
-                                                          str(poi_subtitle_offset + 1))
-            cmd += "[{0}:v]{1},scale={2},{3}{4},trim=duration={5}," \
-                   "drawbox=y={6}:w={7}:h={8}:color=black@0.5:t=fill".format(
-                self.ffmpegInputOffset, self.ffmpegPad, self.PADSCALE, self.ffmpegAnimations[1], "",
-                poi_materials["poi_cover_duration"], self.ffmpegPoiBoxY, self.ffmpegPoiBoxX, self.ffmpegPoiBoxHeight
-            )
-
             self.ffmpegInputOffset += 1
+            cmd = "[{0}:v]{1},scale={2},{3}{4}" \
+                   "drawbox=y={6}:w={7}:h={8}:color=black@0.5:t=fill,trim=duration={5},setpts=PTS-STARTPTS[out{9}];\n".format(
+                self.ffmpegInputOffset, self.ffmpegPad, self.OUTPUTRES, self.ffmpegPoiCoverAnimation, "",
+                poi_materials["poi_cover_duration"],
+                self.ffmpegPoiBoxY, self.ffmpegPoiBoxWidth, self.ffmpegPoiBoxHeight,
+                self.ffmpegInputOffset - self.UGC_INPUT_OFFSET
+            )
+            self.ffmpegFilterComplexCmd += cmd
+
             for material_segs in poi_materials["ucontents"]:
                 # 需要叠加的字幕
                 subtitle = ""
@@ -238,8 +231,8 @@ class Memo:
 
         # 2. 素材合成
 
-        # # PIO字幕偏移
-        # poi_subtitle_offset = 0
+        # PIO字幕偏移
+        poi_title_offset = 0
         # 叠加层偏移
         over_offset = 0
         # 叠加层时间偏移
@@ -247,6 +240,52 @@ class Memo:
         # 音频偏移
         vaover_offset = 0
         for poi_materials in total_materials:
+            poi_subtitle_index = 2 * poi_title_offset
+            cmd = ""
+            if poi_materials["poi_title"]:
+                cmd += "[poi{0}]drawtext=enable='lt(t, {1})':fontsize={2}:fontcolor={3}:fontfile={4}:text={5}:x='{6}':y='{7}':alpha='{8}'," \
+                       "trim=duration={9},setpts=PTS-STARTPTS{10}[poit{11}];\n".format(poi_subtitle_index,
+                                                                    self.POI_CAPTION_DURATION,
+                                                                    self.POI_TITLE_FONTSIZE,
+                                                                    self.POI_CAPTION_COLOR,
+                                                                    self.staticPath + "font/" + self.POI_CAPTION_FONT,
+                                                                    poi_materials["poi_title"],
+                                                                    self.ffmpegPoiTitleX,
+                                                                    self.ffmpegPoiTitleY,
+                                                                    self.ffmpegPoiAlpha,
+                                                                    self.POI_CAPTION_DURATION,
+                                                                    "" if setopts_ts_offset == 0 else "+" + str(
+                                                                                           setopts_ts_offset) + "/TB",
+                                                                    poi_subtitle_index)
+                cmd += "[poi{0}]drawtext=enable='lt(t, {1})':fontsize={2}:fontcolor={3}:fontfile={4}:text={5}:x='{6}':y='{7}':alpha='{8}'," \
+                       "trim=duration={9},setpts=PTS-STARTPTS{10}[poit{11}];\n".format(poi_subtitle_index + 1,
+                                                                    self.POI_CAPTION_DURATION,
+                                                                    self.POI_SUBTITLE_FONTSIZE,
+                                                                    self.POI_CAPTION_COLOR,
+                                                                    self.staticPath + "font/" + self.POI_CAPTION_FONT,
+                                                                    poi_materials["poi_subtitle"],
+                                                                    self.ffmpegPoiSubtitleX,
+                                                                    self.ffmpegPoiSubtitleY,
+                                                                    self.ffmpegPoiAlpha,
+                                                                    self.POI_CAPTION_DURATION,
+                                                                    "" if setopts_ts_offset == 0 else "+" + str(
+                                                                                           setopts_ts_offset) + "/TB",
+                                                                    poi_subtitle_index + 1)
+                # cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=1:alpha=1," \
+                #        "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
+                #                                                "" if setopts_ts_offset == 0 else "+" + str(
+                #                                                                            setopts_ts_offset) + "/TB",
+                #                                                over_offset)
+                cmd += "[over{0}][out{1}]overlay[poioo{2}];\n".format(over_offset, over_offset, poi_title_offset)
+                cmd += "[poioo{0}][poit{1}]overlay[poiover{2}];\n".format(poi_title_offset, poi_subtitle_index, poi_title_offset)
+                cmd += "[poiover{0}][poit{1}]overlay[over{2}];\n".format(poi_title_offset, poi_subtitle_index+1, over_offset+1)
+
+                poi_title_offset += 1
+            else:
+                cmd += "[over{0}][out{1}]overlay[over{2}];\n".format(over_offset, over_offset, over_offset+1)
+            self.ffmpegFilterComplexCmd += cmd
+            over_offset += 1
+            setopts_ts_offset += poi_materials["poi_cover_duration"]
 
             for material_segs in poi_materials["ucontents"]:
                 for material in material_segs["vplist"]:
@@ -277,7 +316,7 @@ class Memo:
                                         setopts_ts_offset+1+material["duration"])
                         vaudio_cmd += ";\n[{0}:a]adelay={1},volume=volume=0.8:eval=frame,apad[outa{2}];\n" \
                                       "[outa{3}][aover{4}]amerge=inputs=2[aover{5}]".format(
-                                        over_offset+2, (setopts_ts_offset+1)*1000, vaover_offset, vaover_offset,
+                                        over_offset+self.UGC_INPUT_OFFSET, (setopts_ts_offset+1)*1000, vaover_offset, vaover_offset,
                                         vaover_offset, vaover_offset+1)
                         vaover_offset += 1
 
