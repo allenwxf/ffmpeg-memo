@@ -18,6 +18,7 @@ class Memo:
     logoPath = staticPath + "logo.png"
     OUTPUTRES = "720x1280"
     AR = "16/9"
+    POICOVERTYPE = 0
     CAPTIONTYPE = 1
     PICTYPE = 2
     VIDEOTYPE = 3
@@ -56,14 +57,14 @@ class Memo:
         # 获取用户上传路线材料
         route_data = sample_route_data.gen_sample_route()
 
+        # 背景时长、所有POI(CUT)格式化过的素材列表
+        bg_duration, total_materials = self.materials_join_conf(route_data)
+
         # 随机获取背景音乐
         self.get_random_bgmusic()
 
         # 添加黑色背景(用于blend效果)
         self.get_blank_bg()
-
-        # 背景时长、所有POI(CUT)格式化过的素材列表
-        bg_duration, total_materials = self.materials_join_conf(route_data)
 
         # 添加输入素材
         for material_segs in total_materials:
@@ -273,7 +274,10 @@ class Memo:
                 ]
             }
             """
-            # print("node name: {}".format(node["node"]))
+
+            # 插入POI封面
+
+
             # 遍历每个material
             for m in node["materials"]:
                 """
