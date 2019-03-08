@@ -27,10 +27,11 @@ class Memo:
     PIXFMT = "yuv420p"
     POI_CAPTION_FONT = "msyh.ttc"
     POI_DEFAULT_COVER = "cut_default.png"
-    POI_TITLE_FONTSIZE = 32
-    POI_SUBTITLE_FONTSIZE = 22
+    POI_TITLE_FONTSIZE = 48
+    POI_SUBTITLE_FONTSIZE = 32
     POI_CAPTION_COLOR = "white"
     POI_CAPTION_DURATION = 4
+    POI_TRANSIT_DURATION = 0.3
 
     scriptConf = {}
     staticPath = "materials/"
@@ -66,9 +67,9 @@ class Memo:
     ffmpegPoiTitleX = "((w-tw)/2)"
     ffmpegPoiTitleY = "min(h/4.5+n,h/4.5+20)"
     ffmpegPoiSubtitleX = "((w-tw)/2)"
-    ffmpegPoiSubtitleY = "max(h/3.2-n,h/3.2-20)"
+    ffmpegPoiSubtitleY = "max(h/3.0-n,h/3.0-20)"
     ffmpegPoiAlpha = "min(1, n/15)"
-    ffmpegPoiBoxY = "ih/4.9"
+    ffmpegPoiBoxY = "ih/5.7"
     ffmpegPoiBoxWidth = "iw"
     ffmpegPoiBoxHeight = 200
 
@@ -275,24 +276,38 @@ class Memo:
                                                                     "" if setopts_ts_offset == 0 else "+" + str(
                                                                                            setopts_ts_offset) + "/TB",
                                                                     poi_subtitle_index + 1)
-                cmd += "[out{0}]format=pix_fmts={1},setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
+                if poi_title_offset == 0:
+                    cmd += "[out{0}]format=pix_fmts={1},setpts=PTS-STARTPTS{2}[va{3}];\n".format(
+                        over_offset, self.PIXFMT, "" if setopts_ts_offset == 0 else "+" + str(setopts_ts_offset) + "/TB",
+                        over_offset)
+                else:
+                    cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d={4}:alpha=0," \
+                        "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
                                                                "" if setopts_ts_offset == 0 else "+" + str(
                                                                                            setopts_ts_offset) + "/TB",
-                                                               over_offset)
+                                                               over_offset, self.POI_TRANSIT_DURATION)
                 cmd += "[over{0}][va{1}]overlay[poioo{2}];\n".format(over_offset, over_offset, poi_title_offset)
                 cmd += "[poioo{0}][poit{1}]overlay[poiover{2}];\n".format(poi_title_offset, poi_subtitle_index, poi_title_offset)
                 cmd += "[poiover{0}][poit{1}]overlay[over{2}];\n".format(poi_title_offset, poi_subtitle_index+1, over_offset+1)
 
                 poi_title_offset += 1
             else:
-                cmd += "[out{0}]format=pix_fmts={1},setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
-                                                                 "" if setopts_ts_offset == 0 else "+" + str(
-                                                                     setopts_ts_offset) + "/TB",
-                                                                 over_offset)
+                if poi_title_offset == 0:
+                    cmd += "[out{0}]format=pix_fmts={1},setpts=PTS-STARTPTS{2}[va{3}];\n".format(
+                        over_offset, self.PIXFMT, "" if setopts_ts_offset == 0 else "+" + str(setopts_ts_offset) + "/TB",
+                        over_offset)
+                else:
+                    cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d={4}:alpha=0," \
+                           "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
+                                                                     "" if setopts_ts_offset == 0 else "+" + str(
+                                                                         setopts_ts_offset) + "/TB",
+                                                                     over_offset, self.POI_TRANSIT_DURATION)
                 cmd += "[over{0}][va{1}]overlay[over{2}];\n".format(over_offset, over_offset, over_offset+1)
             self.ffmpegFilterComplexCmd += cmd
             over_offset += 1
-            setopts_ts_offset += poi_materials["poi_cover_duration"] - 0.3
+
+            if poi_title_offset > 0:
+                setopts_ts_offset += poi_materials["poi_cover_duration"] - self.POI_TRANSIT_DURATION
 
             for material_segs in poi_materials["ucontents"]:
                 for material in material_segs["vplist"]:

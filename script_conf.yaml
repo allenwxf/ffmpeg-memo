@@ -14,7 +14,7 @@ memoflow:
   cut1:
     poi_cover: cut1.png
     poi_title: "塞纳河畔，咖啡屋"
-    poi_subtitle: "老上海调调"
+    poi_subtitle: "————  老上海调调  ————"
     poi_cover_duration: 3
     type1:
       strategy: random
@@ -106,7 +106,7 @@ memoflow:
   cut3:
     poi_cover: cut3.png
     poi_title: "塞纳河畔，咖啡屋"
-    poi_subtitle: "幸福快乐"
+    poi_subtitle: "————  幸福快乐  ————"
     poi_cover_duration: 3
     type1:
       strategy: random
