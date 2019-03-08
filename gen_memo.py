@@ -275,8 +275,7 @@ class Memo:
                                                                     "" if setopts_ts_offset == 0 else "+" + str(
                                                                                            setopts_ts_offset) + "/TB",
                                                                     poi_subtitle_index + 1)
-                cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=0.3:alpha=0," \
-                       "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
+                cmd += "[out{0}]format=pix_fmts={1},setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
                                                                "" if setopts_ts_offset == 0 else "+" + str(
                                                                                            setopts_ts_offset) + "/TB",
                                                                over_offset)
@@ -286,8 +285,7 @@ class Memo:
 
                 poi_title_offset += 1
             else:
-                cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=0.3:alpha=0," \
-                       "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
+                cmd += "[out{0}]format=pix_fmts={1},setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
                                                                  "" if setopts_ts_offset == 0 else "+" + str(
                                                                      setopts_ts_offset) + "/TB",
                                                                  over_offset)
