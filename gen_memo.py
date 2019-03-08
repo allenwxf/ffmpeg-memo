@@ -175,11 +175,12 @@ class Memo:
             # POI COVER
             self.ffmpegInputOffset += 1
             cmd = "[{0}:v]{1},scale={2},{3}{4}" \
-                   "drawbox=y={6}:w={7}:h={8}:color=black@0.5:t=fill,trim=duration={5},setpts=PTS-STARTPTS[out{9}];\n".format(
+                   "drawbox=enable='lt(t,{10})':y={6}:w={7}:h={8}:color=black@0.5:t=fill,trim=duration={5},setpts=PTS-STARTPTS[out{9}];\n".format(
                 self.ffmpegInputOffset, self.ffmpegPad, self.OUTPUTRES, self.ffmpegPoiCoverAnimation, "",
                 poi_materials["poi_cover_duration"],
                 self.ffmpegPoiBoxY, self.ffmpegPoiBoxWidth, self.ffmpegPoiBoxHeight,
-                self.ffmpegInputOffset - self.UGC_INPUT_OFFSET
+                self.ffmpegInputOffset - self.UGC_INPUT_OFFSET,
+                poi_materials["poi_cover_duration"]
             )
             self.ffmpegFilterComplexCmd += cmd
 
@@ -271,12 +272,12 @@ class Memo:
                                                                     "" if setopts_ts_offset == 0 else "+" + str(
                                                                                            setopts_ts_offset) + "/TB",
                                                                     poi_subtitle_index + 1)
-                # cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=1:alpha=1," \
-                #        "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
-                #                                                "" if setopts_ts_offset == 0 else "+" + str(
-                #                                                                            setopts_ts_offset) + "/TB",
-                #                                                over_offset)
-                cmd += "[over{0}][out{1}]overlay[poioo{2}];\n".format(over_offset, over_offset, poi_title_offset)
+                cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=1:alpha=1," \
+                       "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
+                                                               "" if setopts_ts_offset == 0 else "+" + str(
+                                                                                           setopts_ts_offset) + "/TB",
+                                                               over_offset)
+                cmd += "[over{0}][va{1}]overlay[poioo{2}];\n".format(over_offset, over_offset, poi_title_offset)
                 cmd += "[poioo{0}][poit{1}]overlay[poiover{2}];\n".format(poi_title_offset, poi_subtitle_index, poi_title_offset)
                 cmd += "[poiover{0}][poit{1}]overlay[over{2}];\n".format(poi_title_offset, poi_subtitle_index+1, over_offset+1)
 
