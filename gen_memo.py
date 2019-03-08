@@ -71,7 +71,7 @@ class Memo:
     ffmpegPoiAlpha = "min(1, n/15)"
     ffmpegPoiBoxY = "ih/5.7"
     ffmpegPoiBoxWidth = "iw"
-    ffmpegPoiBoxHeight = 200
+    ffmpegPoiBoxHeight = 300
 
     def __init__(self, script_conf_path):
         try:
