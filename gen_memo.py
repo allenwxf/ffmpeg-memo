@@ -9,6 +9,7 @@ import copy
 import yaml
 # from yaml.scanner import ScannerError
 from pprint import pprint
+import subprocess
 import sample_route_data
 
 
@@ -121,7 +122,8 @@ class Memo:
                              }]
              }]
         """
-        pprint(total_materials[0])
+        # pprint(total_materials[0])
+
         # 随机获取背景音乐
         self.get_random_bgmusic()
 
@@ -383,8 +385,13 @@ class Memo:
         self.export_ffmpeg_cmd()
 
         # 执行ffmpeg命令
-        ret = os.system(self.ffmpegCmd)
-        print(ret)  # 异常：1
+        code = 0
+        try:
+            out_bytes = subprocess.check_output(self.ffmpegCmd, stderr=subprocess.STDOUT, shell=True)
+        except subprocess.CalledProcessError as e:
+            out_bytes = e.output  # Output generated before error
+            code = e.returncode  # Return code
+        self.ffmpeg_log_output("uid: {0}, code: {1}, msg: {2}\n\n".format(route_data["uid"], code, out_bytes.decode('utf-8')))
         exit(0)
 
     def get_random_bgmusic(self):
@@ -502,6 +509,11 @@ class Memo:
         fo = open("generated_ffmpeg_cmd.txt", "w")
         fo.write(self.ffmpegCmd)
         fo.close()
+
+    def ffmpeg_log_output(self, content):
+        fl = open("ffmpeg_gen_log.log", "a")
+        fl.write(content)
+        fl.close()
 
 
 class UsageError(Exception):
