@@ -175,12 +175,15 @@ class Memo:
             # POI COVER
             self.ffmpegInputOffset += 1
             cmd = "[{0}:v]{1},scale={2},{3}{4}" \
-                   "drawbox=enable='lt(t,{10})':y={6}:w={7}:h={8}:color=black@0.5:t=fill,trim=duration={5},setpts=PTS-STARTPTS[out{9}];\n".format(
-                self.ffmpegInputOffset, self.ffmpegPad, self.OUTPUTRES, self.ffmpegPoiCoverAnimation, "",
+                   "zoompan=z='min(max(zoom,pzoom)+0.00001,2.0)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={11}," \
+                  "drawbox=enable='lt(t,{10})':y={6}:w={7}:h={8}:color=black@0.5:t=fill,trim=duration={5}," \
+                  "setpts=PTS-STARTPTS[out{9}];\n".format(
+                self.ffmpegInputOffset, self.ffmpegPad, self.PADSCALE, self.ffmpegPoiCoverAnimation, "",
                 poi_materials["poi_cover_duration"],
                 self.ffmpegPoiBoxY, self.ffmpegPoiBoxWidth, self.ffmpegPoiBoxHeight,
                 self.ffmpegInputOffset - self.UGC_INPUT_OFFSET,
-                poi_materials["poi_cover_duration"]
+                poi_materials["poi_cover_duration"],
+                self.OUTPUTRES
             )
             self.ffmpegFilterComplexCmd += cmd
 
@@ -272,7 +275,7 @@ class Memo:
                                                                     "" if setopts_ts_offset == 0 else "+" + str(
                                                                                            setopts_ts_offset) + "/TB",
                                                                     poi_subtitle_index + 1)
-                cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=1:alpha=1," \
+                cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=0.3:alpha=0," \
                        "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
                                                                "" if setopts_ts_offset == 0 else "+" + str(
                                                                                            setopts_ts_offset) + "/TB",
@@ -283,10 +286,15 @@ class Memo:
 
                 poi_title_offset += 1
             else:
-                cmd += "[over{0}][out{1}]overlay[over{2}];\n".format(over_offset, over_offset, over_offset+1)
+                cmd += "[out{0}]format=pix_fmts={1},fade=t=in:st=0:d=0.3:alpha=0," \
+                       "setpts=PTS-STARTPTS{2}[va{3}];\n".format(over_offset, self.PIXFMT,
+                                                                 "" if setopts_ts_offset == 0 else "+" + str(
+                                                                     setopts_ts_offset) + "/TB",
+                                                                 over_offset)
+                cmd += "[over{0}][va{1}]overlay[over{2}];\n".format(over_offset, over_offset, over_offset+1)
             self.ffmpegFilterComplexCmd += cmd
             over_offset += 1
-            setopts_ts_offset += poi_materials["poi_cover_duration"]
+            setopts_ts_offset += poi_materials["poi_cover_duration"] - 0.3
 
             for material_segs in poi_materials["ucontents"]:
                 for material in material_segs["vplist"]:

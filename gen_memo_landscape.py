@@ -45,7 +45,7 @@ class Memo:
 
     def __init__(self, script_conf_path):
         try:
-            f = open(script_conf_path)
+            f = open(script_conf_path, encoding="utf-8")
             self.scriptConf = yaml.load(f)
         except FileNotFoundError:
             print("script conf file not found：" + str(FileNotFoundError))
@@ -235,7 +235,7 @@ class Memo:
         self.export_ffmpeg_filter_complex()
 
         # 导出ffmpeg命令
-        # self.export_ffmpeg_cmd()
+        self.export_ffmpeg_cmd()
 
         os.system(self.ffmpegCmd)
         exit(0)
