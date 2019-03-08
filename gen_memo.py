@@ -6,11 +6,13 @@ import os
 import getopt
 import random
 import copy
+import datetime
 import yaml
 # from yaml.scanner import ScannerError
 from pprint import pprint
 import subprocess
 import sample_route_data
+import data_source
 
 
 class Memo:
@@ -33,6 +35,8 @@ class Memo:
     POI_CAPTION_COLOR = "white"
     POI_CAPTION_DURATION = 4
     POI_TRANSIT_DURATION = 0.3
+
+    routeData = None
 
     scriptConf = {}
     staticPath = "materials/"
@@ -74,23 +78,24 @@ class Memo:
     ffmpegPoiBoxWidth = "iw"
     ffmpegPoiBoxHeight = 300
 
-    def __init__(self, script_conf_path):
+    def __init__(self, script_conf_path, route_data):
         try:
             f = open(script_conf_path, encoding="utf-8")
             self.scriptConf = yaml.load(f)
+            self.routeData = route_data
         except FileNotFoundError:
             print("script conf file not found：" + str(FileNotFoundError))
             exit(0)
 
     def generate_memo(self):
         # 获取用户上传路线材料
-        route_data = sample_route_data.gen_sample_route()
+        # route_data = sample_route_data.gen_sample_route()
 
         # 生成filter complex脚本配置文件名字
-        self.get_filter_complex_filename(route_data)
+        self.get_filter_complex_filename(self.routeData)
 
         # 背景时长(DEPRECATED)、所有POI(CUT)格式化过的素材列表
-        bg_duration, total_materials = self.materials_join_conf(route_data)
+        bg_duration, total_materials = self.materials_join_conf(self.routeData)
         """
         total_materials .eg:
             [{'poi_cover': 'cut1.png',
@@ -136,7 +141,7 @@ class Memo:
         # 添加输入素材
         for poi_materials in total_materials:
             # POI COVER
-            poi_cover_path = self.poiCoverPath + str(route_data["route_id"]) + "/" + poi_materials["poi_cover"]
+            poi_cover_path = self.poiCoverPath + str(self.routeData["route_id"]) + "/" + poi_materials["poi_cover"]
             if not os.path.exists(poi_cover_path):
                 poi_cover_path = self.poiCoverPath + self.POI_DEFAULT_COVER
             self.ffmpegCmd += " -i {}".format(poi_cover_path)
@@ -361,7 +366,7 @@ class Memo:
                                 script_author_conf["color"],
                                 script_author_conf["x"],
                                 script_author_conf["y"],
-                                route_data["author"],
+                                self.routeData["author"],
                                 script_author_conf["font_size"])
             self.ffmpegFilterComplexCmd += cmd
         else:
@@ -375,7 +380,7 @@ class Memo:
         # 添加输出选项
         self.ffmpegCmd += " -map [outv] {0} -map [{1}] {2} {3} -shortest mymemo_{4}.mp4".format(
             self.ffmpegVoutConf, "aover"+str(vaover_offset), self.ffmpegAoutConf, self.ffmpegMetaConf,
-            str(route_data["author"])+"_"+route_data["route_name"]+"_"+str(route_data["finishtime"])
+            str(self.routeData["author"])+"_"+self.routeData["route_name"]+"_"+str(self.routeData["finishtime"])
         )
 
         # 生成filter_complex脚本文件
@@ -391,8 +396,8 @@ class Memo:
         except subprocess.CalledProcessError as e:
             out_bytes = e.output  # Output generated before error
             code = e.returncode  # Return code
-        self.ffmpeg_log_output("uid: {0}, code: {1}, msg: {2}\n\n".format(route_data["uid"], code, out_bytes.decode('utf-8')))
-        exit(0)
+        self.ffmpeg_log_output("uid: {0}, ts: {1}, code: {2}, msg: {3}\n\n".format(
+            self.routeData["uid"], datetime.datetime.now(), code, out_bytes.decode('utf-8')))
 
     def get_random_bgmusic(self):
         conf_bgmusic = self.scriptConf["memoflow"]["bgmusic"]
@@ -511,7 +516,7 @@ class Memo:
         fo.close()
 
     def ffmpeg_log_output(self, content):
-        fl = open("ffmpeg_gen_log.log", "a")
+        fl = open("ffmpeg_gen_log.log", "a", encoding='utf-8')
         fl.write(content)
         fl.close()
 
@@ -522,6 +527,11 @@ class UsageError(Exception):
 
     def __str__(self):
         return self.msg
+
+def log(content):
+    flog = open("gen_mem.log", "a", encoding='utf-8')
+    flog.write(content)
+    flog.close()
 
 
 def main(argv=None):
@@ -546,12 +556,18 @@ def main(argv=None):
     # for arg in args:
         # process(arg)  # process() is defined elsewhere
 
-    script_conf_path = r"script_conf.yaml"
-    memo = Memo(script_conf_path)
-    memo.generate_memo()
+    route_data_batch = data_source.get_route_data()
+
+    for route_data in route_data_batch:
+        script_conf_path = r"script_conf_r{}.yaml".format(route_data["route_id"])
+        if os.path.exists(script_conf_path):
+            memo = Memo(script_conf_path, route_data)
+            memo.generate_memo()
+            log("uid: {}, route_id: {} memo generated.".format(route_data["uid"], route_data["route_id"]))
+            print("uid: {}, route_id: {} memo generated.".format(route_data["uid"], route_data["route_id"]))
+        else:
+            log("uid: {}, route_id: {} route script not found!".format(route_data["uid"], route_data["route_id"]))
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
